@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Chick</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+        
+        body {
+            font-family: 'Bubblegum Sans', cursive;
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: all 2s ease;
+        }
+        
+        .sun {
+            position: absolute;
+            top: 50px;
+            right: 100px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #ffff00 60%, #ffa500);
+            border-radius: 50%;
+            box-shadow: 0 0 40px 15px rgba(255, 255, 0, 0.4);
+            transition: all 2s ease;
+        }
+        
+        .moon {
+            position: absolute;
+            top: 50px;
+            right: 100px;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #f5f5f5 60%, #e0e0e0);
+            border-radius: 50%;
+            box-shadow: 0 0 40px 15px rgba(255, 255, 255, 0.4);
+            opacity: 0;
+            transition: all 2s ease;
+        }
+        
+        .cloud-container {
+            position: absolute;
+            animation: float 30s infinite linear;
+        }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(-150px); }
+            100% { transform: translateX(calc(100vw + 150px)); }
+        }
+        
+        .river {
+            position: absolute;
+            width: 110%;
+            left: -5%;
+            top: 50%;
+            z-index: 5;
+        }
+        
+        .hut {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            z-index: 6;
+        }
+        
+        .tree {
+            position: absolute;
+            width: 80px;
+            height: 120px;
+            z-index: 6;
+        }
+        
+        .chick {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            transform-origin: bottom center;
+            animation: bounce 0.5s infinite alternate;
+            z-index: 10;
+        }
+        
+        .golden {
+            filter: drop-shadow(0 0 8px gold);
+        }
+        
+        .fake {
+            opacity: 0.8;
+            filter: drop-shadow(0 0 5px red);
+        }
+        
+        @keyframes bounce {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-10px) scale(1.05); }
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-50px); }
+        }
+        
+        .score-popup {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            animation: fadeOut 1s forwards;
+            z-index: 20;
+        }
+        
+        .start-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 40px;
+            font-size: 28px;
+            background: linear-gradient(to bottom, #ffd33d, #ea4a00);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #b93700, 0 15px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s;
+            z-index: 100;
+        }
+        
+        .start-button:active {
+            box-shadow: 0 4px 0 #b93700, 0 8px 10px rgba(0, 0, 0, 0.3);
+            transform: translate(-50%, -46%);
+        }
+        
+        .game-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 50;
+        }
+        
+        .score, .timer {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Background elements -->
+        <div class="background" id="sky"></div>
+        <div class="background" id="ground"></div>
+        <div class="sun" id="sun"></div>
+        <div class="moon" id="moon"></div>
+        
+        <!-- River will be added via SVG -->
+        <svg class="river" viewBox="0 0 1200 200" preserveAspectRatio="none">
+            <path id="riverPath" d="M-50,100 Q150,50 300,120 Q450,180 600,100 Q750,20 900,80 Q1050,140 1200,70 Q1350,0 1500,100" 
+                  fill="none" stroke="#4facfe" stroke-width="60" />
+            <animate xlink:href="#riverPath" attributeName="d" 
+                     from="M-50,100 Q150,50 300,120 Q450,180 600,100 Q750,20 900,80 Q1050,140 1200,70 Q1350,0 1500,100"
+                     to="M-50,100 Q150,150 300,80 Q450,20 600,100 Q750,180 900,120 Q1050,60 1200,130 Q1350,200 1500,100"
+                     dur="10s" repeatCount="indefinite" fill="freeze" />
+            <linearGradient id="riverGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#4facfe" />
+                <stop offset="100%" stop-color="#00f2fe" />
+            </linearGradient>
+            <use xlink:href="#riverPath" fill="url(#riverGradient)" />
+        </svg>
+        
+        <!-- Game UI -->
+        <div class="game-ui" id="gameUI" style="display: none;">
+            <div class="score">Score: <span id="scoreValue">0</span></div>
+            <div class="timer">Time: <span id="timerValue">30</span>s</div>
+        </div>
+        
+        <!-- Start button -->
+        <button class="start-button" id="startButton">Start Game</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game elements
+            const gameContainer = document.querySelector('.game-container');
+            const sky = document.getElementById('sky');
+            const ground = document.getElementById('ground');
+            const sun = document.getElementById('sun');
+            const moon = document.getElementById('moon');
+            const startButton = document.getElementById('startButton');
+            const gameUI = document.getElementById('gameUI');
+            const scoreValue = document.getElementById('scoreValue');
+            const timerValue = document.getElementById('timerValue');
+            
+            // Game variables
+            let score = 0;
+            let timeLeft = 30;
+            let gameActive = false;
+            let gameTimer;
+            let chickInterval;
+            let isNightTime = false;
+            
+            // Set initial background
+            sky.style.background = 'linear-gradient(to bottom, #87CEEB, #1E90FF)';
+            ground.style.background = 'linear-gradient(to top, #228B22, #32CD32)';
+            ground.style.height = '60%';
+            ground.style.top = '40%';
+            
+            // Create clouds
+            createClouds();
+            
+            // Create stars (initially hidden)
+            createStars();
+            
+            // Create scenery
+            createScenery();
+            
+            // Start game function
+            function startGame() {
+                score = 0;
+                timeLeft = 30;
+                isNightTime = false;
+                scoreValue.textContent = score;
+                timerValue.textContent = timeLeft;
+                
+                // Reset background to day
+                sky.style.background = 'linear-gradient(to bottom, #87CEEB, #1E90FF)';
+                sun.style.opacity = '1';
+                moon.style.opacity = '0';
+                document.querySelectorAll('.star').forEach(star => {
+                    star.style.opacity = '0';
+                });
+                
+                // Hide start button, show UI
+                startButton.style.display = 'none';
+                gameUI.style.display = 'flex';
+                
+                // Clear any existing chicks
+                document.querySelectorAll('.chick').forEach(chick => {
+                    chick.remove();
+                });
+                
+                // Start game logic
+                gameActive = true;
+                
+                // Start spawning chicks
+                chickInterval = setInterval(spawnChick, 1000);
+                
+                // Start timer
+                gameTimer = setInterval(updateTimer, 1000);
+            }
+            
+            // Update timer function
+            function updateTimer() {
+                timeLeft--;
+                timerValue.textContent = timeLeft;
+                
+                // Switch to night mode at 15 seconds
+                if (timeLeft === 15 && !isNightTime) {
+                    switchToNight();
+                }
+                
+                // End game when time runs out
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }
+            
+            // Switch to night mode
+            function switchToNight() {
+                isNightTime = true;
+                sky.style.background = 'linear-gradient(to bottom, #0a1f44, #000428)';
+                sun.style.opacity = '0';
+                moon.style.opacity = '1';
+                
+                // Show stars
+                document.querySelectorAll('.star').forEach(star => {
+                    star.style.opacity = '0.8';
+                });
+            }
+            
+            // End game function
+            function endGame() {
+                gameActive = false;
+                clearInterval(gameTimer);
+                clearInterval(chickInterval);
+                
+                // Remove all chicks
+                document.querySelectorAll('.chick').forEach(chick => {
+                    chick.remove();
+                });
+                
+                // Show start button with final score
+                startButton.textContent = `Game Over! Score: ${score} - Play Again?`;
+                startButton.style.display = 'block';
+                gameUI.style.display = 'none';
+            }
+            
+            // Create realistic clouds function
+            function createClouds() {
+                for (let i = 0; i < 5; i++) {
+                    const cloudContainer = document.createElement('div');
+                    cloudContainer.className = 'cloud-container';
+                    cloudContainer.style.top = `${Math.random() * 150 + 20}px`;
+                    cloudContainer.style.left = `${Math.random() * 100}%`;
+                    cloudContainer.style.animationDuration = `${Math.random() * 60 + 30}s`;
+                    cloudContainer.style.animationDelay = `${Math.random() * 30}s`;
+                    
+                    // Create cloud SVG
+                    const cloudSize = Math.random() * 100 + 80;
+                    cloudContainer.innerHTML = `
+                        <svg width="${cloudSize}" height="${cloudSize * 0.6}" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+                            <filter id="cloud-shadow-${i}" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                                <feOffset dx="0" dy="2" result="offsetblur" />
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.2" />
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                            <g filter="url(#cloud-shadow-${i})">
+                                <ellipse cx="80" cy="80" rx="50" ry="30" fill="white" />
+                                <ellipse cx="120" cy="70" rx="60" ry="40" fill="white" />
+                                <ellipse cx="50" cy="60" rx="40" ry="30" fill="white" />
+                                <ellipse cx="150" cy="60" rx="30" ry="20" fill="white" />
+                                <ellipse cx="100" cy="40" rx="45" ry="25" fill="white" />
+                            </g>
+                        </svg>
+                    `;
+                    
+                    gameContainer.appendChild(cloudContainer);
+                }
+            }
+            
+            // Create stars function
+            function createStars() {
+                for (let i = 0; i < 50; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.style.width = `${Math.random() * 3 + 1}px`;
+                    star.style.height = star.style.width;
+                    star.style.top = `${Math.random() * 35}%`;
+                    star.style.left = `${Math.random() * 100}%`;
+                    gameContainer.appendChild(star);
+                }
+            }
+            
+            // Create scenery (huts and trees)
+            function createScenery() {
+                // Create huts on opposite sides of the river
+                createHut(15, 40); // Upper side of the river
+                createHut(75, 65); // Lower side of the river
+                
+                // Create trees on both sides of the river
+                // Upper side trees
+                createTree(5, 35);
+                createTree(25, 38);
+                createTree(40, 32);
+                
+                // Lower side trees
+                createTree(60, 65);
+                createTree(85, 70);
+                createTree(92, 60);
+            }
+            
+            // Create hut function
+            function createHut(x, y) {
+                const hut = document.createElement('div');
+                hut.className = 'hut';
+                hut.style.left = `${x}%`;
+                hut.style.top = `${y}%`;
+                hut.innerHTML = `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="20" y="50" width="60" height="40" fill="#8B4513" />
+                        <polygon points="10,50 50,20 90,50" fill="#A52A2A" />
+                        <rect x="40" y="70" width="20" height="20" fill="#4B2D0F" />
+                        <circle cx="45" cy="80" r="2" fill="#FFD700" />
+                    </svg>
+                `;
+                gameContainer.appendChild(hut);
+            }
+            
+            // Create tree function
+            function createTree(x, y) {
+                const tree = document.createElement('div');
+                tree.className = 'tree';
+                tree.style.left = `${x}%`;
+                tree.style.top = `${y}%`;
+                tree.innerHTML = `
+                    <svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="35" y="60" width="10" height="60" fill="#8B4513" />
+                        <polygon points="40,10 10,60 70,60" fill="#228B22" />
+                        <polygon points="40,30 15,70 65,70" fill="#228B22" />
+                        <polygon points="40,50 20,80 60,80" fill="#228B22" />
+                    </svg>
+                `;
+                gameContainer.appendChild(tree);
+            }
+            
+            // Spawn chick function
+            function spawnChick() {
+                if (!gameActive) return;
+                
+                const chick = document.createElement('div');
+                chick.className = 'chick';
+                
+                // Determine chick type
+                const random = Math.random();
+                let chickType = 'normal';
+                
+                if (random > 0.85) {
+                    chickType = 'golden';
+                    chick.classList.add('golden');
+                } else if (random > 0.7) {
+                    chickType = 'fake';
+                    chick.classList.add('fake');
+                }
+                
+                // Position the chick on land (not on the river)
+                let x, y;
+                
+                // Get a random position
+                x = Math.random() * 80 + 10; // 10% to 90% of screen width
+                
+                // Decide if chick should be above or below the river
+                // The river is winding, so we need to adjust based on x position
+                // This is a simplified approximation of the river's path
+                let riverY;
+                
+                if (x < 20) {
+                    riverY = 48; // Left side of screen
+                } else if (x < 40) {
+                    riverY = 55; // First bend
+                } else if (x < 60) {
+                    riverY = 45; // Middle dip
+                } else if (x < 80) {
+                    riverY = 55; // Second bend
+                } else {
+                    riverY = 48; // Right side
+                }
+                
+                const riverWidth = 12; // Approximate river width in percentage
+                
+                // Decide if chick should be above or below the river
+                if (Math.random() > 0.5) {
+                    // Above the river
+                    y = Math.random() * (riverY - riverWidth - 10) + 25;
+                } else {
+                    // Below the river
+                    y = Math.random() * (25) + riverY + riverWidth;
+                }
+                
+                chick.style.left = `${x}%`;
+                chick.style.top = `${y}%`;
+                chick.style.animation = `bounce 0.5s infinite alternate, pop 0.3s`;
+                
+                // Create chick SVG
+                chick.innerHTML = `
+                    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="30" cy="40" rx="20" ry="15" fill="${chickType === 'golden' ? '#FFD700' : '#FFFF00'}" />
+                        <circle cx="30" cy="25" r="15" fill="${chickType === 'golden' ? '#FFD700' : '#FFFF00'}" />
+                        <circle cx="25" cy="20" r="2.5" fill="#000" />
+                        <circle cx="35" cy="20" r="2.5" fill="#000" />
+                        <polygon points="30,25 25,30 35,30" fill="#FF6600" />
+                        <polygon points="15,40 5,30 15,35" fill="${chickType === 'golden' ? '#FFD700' : '#FFFF00'}" />
+                        <polygon points="45,40 55,30 45,35" fill="${chickType === 'golden' ? '#FFD700' : '#FFFF00'}" />
+                        <line x1="20" y1="50" x2="25" y2="55" stroke="#FF6600" stroke-width="2" />
+                        <line x1="40" y1="50" x2="35" y2="55" stroke="#FF6600" stroke-width="2" />
+                        ${chickType === 'fake' ? '<circle cx="30" cy="32" r="15" fill="none" stroke="red" stroke-width="2" stroke-dasharray="5,2" />' : ''}
+                    </svg>
+                `;
+                
+                // Add click handler
+                chick.addEventListener('click', function() {
+                    if (!gameActive) return;
+                    
+                    // Handle click based on chick type
+                    let points = 0;
+                    let color = '';
+                    
+                    if (chickType === 'golden') {
+                        points = 5;
+                        color = 'gold';
+                    } else if (chickType === 'fake') {
+                        points = -3;
+                        color = 'red';
+                    } else {
+                        points = 1;
+                        color = 'green';
+                    }
+                    
+                    // Update score
+                    score += points;
+                    scoreValue.textContent = score;
+                    
+                    // Show score popup
+                    const popup = document.createElement('div');
+                    popup.className = 'score-popup';
+                    popup.style.left = chick.style.left;
+                    popup.style.top = `calc(${chick.style.top} - 20px)`;
+                    popup.style.color = color;
+                    popup.textContent = points > 0 ? `+${points}` : points;
+                    gameContainer.appendChild(popup);
+                    
+                    // Remove popup after animation
+                    setTimeout(() => {
+                        popup.remove();
+                    }, 1000);
+                    
+                    // Remove chick
+                    chick.remove();
+                });
+                
+                // Add chick to game
+                gameContainer.appendChild(chick);
+                
+                // Remove chick after a delay
+                setTimeout(() => {
+                    if (chick.parentNode === gameContainer) {
+                        chick.remove();
+                    }
+                }, 2000);
+            }
+            
+            // Start button click handler
+            startButton.addEventListener('click', startGame);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'960aefff21107edf',t:'MTc1Mjc2Nzg3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
